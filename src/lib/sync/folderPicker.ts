@@ -23,25 +23,10 @@ export class FolderPicker {
         };
       } else {
         // Fallback for browsers that don't support the File System Access API
-        // Provide more realistic looking paths without the (Mock) label
+        // Simply inform the user that folder selection isn't supported
+        console.error('This browser does not support the File System Access API required for folder selection.');
         
-        // Create different mock paths for source and destination
-        let mockPath, mockFolderName;
-        
-        if (type === 'source') {
-          mockFolderName = 'Documents';
-          mockPath = `/Users/username/${mockFolderName}`;
-        } else {
-          mockFolderName = 'Backup';
-          mockPath = `/Users/username/${mockFolderName}`;
-        }
-        
-        console.log(`Using mock folder for ${type} as File System Access API is not supported`);
-        
-        return {
-          path: mockPath,
-          name: mockFolderName,
-        };
+        throw new Error('Folder selection is not supported in this browser. Please use a modern browser like Chrome, Edge, or Opera.');
       }
     } catch (error) {
       console.error(`Error selecting ${type} folder:`, error);

@@ -1,12 +1,12 @@
+
 import { FolderPath, SyncStatus, SyncStats } from '../types';
 import { SyncServiceInterface } from './types';
-import { FileUtils, FileInfo } from './fileUtils';
+import { FileUtils } from './fileUtils';
 import { FolderPicker } from './folderPicker';
 import { MonitoringService } from './monitoringService';
 import { SettingsManager } from './settingsManager';
 import { StatusManager } from './statusManager';
 import { StatsManager } from './statsManager';
-import { mockSyncOperation } from './utils';
 import { toast } from 'sonner';
 
 class SyncService implements SyncServiceInterface {
@@ -17,7 +17,6 @@ class SyncService implements SyncServiceInterface {
   private settingsManager: SettingsManager;
   private statusManager: StatusManager;
   private statsManager: StatsManager;
-  private mockMode: boolean = false;
   
   constructor() {
     this.settingsManager = new SettingsManager();
@@ -31,9 +30,8 @@ class SyncService implements SyncServiceInterface {
     );
     
     // Check if the File System Access API is available
-    this.mockMode = typeof window.showDirectoryPicker !== 'function';
-    if (this.mockMode) {
-      console.log('File System Access API is not available. Running in mock mode.');
+    if (typeof window.showDirectoryPicker !== 'function') {
+      console.warn('File System Access API is not available. Full functionality requires a modern browser like Chrome, Edge, or Opera.');
     }
   }
   
@@ -68,12 +66,6 @@ class SyncService implements SyncServiceInterface {
   }
   
   canSync(): boolean {
-    // In mock mode, we allow syncing if paths are set
-    if (this.mockMode) {
-      const settings = this.settingsManager.getSettings();
-      return !!settings.sourcePath && !!settings.destinationPath;
-    }
-    // Otherwise, require directory handles
     return !!this.sourceDirectoryHandle && !!this.destinationDirectoryHandle;
   }
   
@@ -81,7 +73,7 @@ class SyncService implements SyncServiceInterface {
     try {
       const folderInfo = await FolderPicker.browseForFolder(type);
       
-      // Store the directory handle for later use (if available)
+      // Store the directory handle for later use
       if (folderInfo.handle) {
         if (type === 'source') {
           this.sourceDirectoryHandle = folderInfo.handle as FileSystemDirectoryHandle;
@@ -110,6 +102,9 @@ class SyncService implements SyncServiceInterface {
     if (!this.canSync()) {
       this.statusManager.setStatus('error');
       console.error('Source and destination folders must be selected');
+      toast.error('Cannot sync', {
+        description: 'Source and destination folders must be selected first.',
+      });
       return;
     }
     
@@ -131,18 +126,13 @@ class SyncService implements SyncServiceInterface {
         this.fileCache.clear();
       }
       
-      // If we're in mock mode, simulate a sync operation
-      if (this.mockMode) {
-        await mockSyncOperation(stats);
-      } else {
-        // Perform the actual sync
-        await FileUtils.syncFolders(
-          this.sourceDirectoryHandle!,
-          this.destinationDirectoryHandle!,
-          this.fileCache,
-          stats
-        );
-      }
+      // Perform the actual sync
+      await FileUtils.syncFolders(
+        this.sourceDirectoryHandle!,
+        this.destinationDirectoryHandle!,
+        this.fileCache,
+        stats
+      );
       
       // Complete stats
       stats.endTime = Date.now();
@@ -164,6 +154,9 @@ class SyncService implements SyncServiceInterface {
     } catch (error) {
       this.statusManager.setStatus('error');
       console.error('Sync failed:', error);
+      toast.error('Sync failed', {
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+      });
     }
   }
   
@@ -171,6 +164,9 @@ class SyncService implements SyncServiceInterface {
     if (!this.canSync()) {
       this.statusManager.setStatus('error');
       console.error('Source and destination folders must be selected');
+      toast.error('Cannot start monitoring', {
+        description: 'Source and destination folders must be selected first.',
+      });
       return;
     }
     

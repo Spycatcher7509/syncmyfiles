@@ -10,13 +10,11 @@ export class SettingsManager {
   };
   
   setSourcePath(path: string): void {
-    // Remove any (Mock) indicators if they exist for backward compatibility
-    this.settings.sourcePath = path.replace(' (Mock)', '');
+    this.settings.sourcePath = path;
   }
   
   setDestinationPath(path: string): void {
-    // Remove any (Mock) indicators if they exist for backward compatibility
-    this.settings.destinationPath = path.replace(' (Mock)', '');
+    this.settings.destinationPath = path;
   }
   
   setPollingInterval(seconds: number): void {
