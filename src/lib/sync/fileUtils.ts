@@ -1,4 +1,6 @@
 
+import { SyncStats } from '../types';
+
 export interface FileInfo {
   lastModified: number;
   size: number;
@@ -10,7 +12,8 @@ export class FileUtils {
     destDir: FileSystemDirectoryHandle,
     fileName: string,
     filePath: string,
-    fileCache: Map<string, FileInfo>
+    fileCache: Map<string, FileInfo>,
+    stats: SyncStats
   ): Promise<void> {
     try {
       // Get the file handle from the source directory
@@ -54,6 +57,10 @@ export class FileUtils {
       await writable.write(fileData);
       await writable.close();
       
+      // Update statistics
+      stats.filesCopied++;
+      stats.bytesCopied += sourceFile.size;
+      
       console.log(`Synced file: ${filePath}`);
     } catch (error) {
       console.error(`Error syncing file ${filePath}:`, error);
@@ -65,6 +72,7 @@ export class FileUtils {
     sourceDir: FileSystemDirectoryHandle,
     destDir: FileSystemDirectoryHandle,
     fileCache: Map<string, FileInfo>,
+    stats: SyncStats,
     subPath: string = ""
   ): Promise<void> {
     // Get all entries from the source directory
@@ -72,7 +80,7 @@ export class FileUtils {
       const entryPath = subPath ? `${subPath}/${name}` : name;
       
       if (entry.kind === 'file') {
-        await FileUtils.syncFile(sourceDir, destDir, name, entryPath, fileCache);
+        await FileUtils.syncFile(sourceDir, destDir, name, entryPath, fileCache, stats);
       } else if (entry.kind === 'directory') {
         // Create the corresponding directory in the destination if it doesn't exist
         let destSubDir: FileSystemDirectoryHandle;
@@ -85,7 +93,7 @@ export class FileUtils {
         
         // Recursively sync subdirectories
         const sourceSubDir = await sourceDir.getDirectoryHandle(name);
-        await FileUtils.syncFolders(sourceSubDir, destSubDir, fileCache, entryPath);
+        await FileUtils.syncFolders(sourceSubDir, destSubDir, fileCache, stats, entryPath);
       }
     }
   }

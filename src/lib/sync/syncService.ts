@@ -1,9 +1,10 @@
 
-import { FolderPath, SyncSettings, SyncStatus } from '../types';
+import { FolderPath, SyncSettings, SyncStatus, SyncStats } from '../types';
 import { SyncServiceInterface } from './types';
 import { FileUtils, FileInfo } from './fileUtils';
 import { FolderPicker } from './folderPicker';
 import { MonitoringService } from './monitoringService';
+import { toast } from 'sonner';
 
 class SyncService implements SyncServiceInterface {
   private settings: SyncSettings = {
@@ -19,6 +20,8 @@ class SyncService implements SyncServiceInterface {
   private destinationDirectoryHandle: FileSystemDirectoryHandle | null = null;
   private fileCache: Map<string, FileInfo> = new Map();
   private monitoringService: MonitoringService;
+  private latestStats: SyncStats | null = null;
+  private statsListeners: ((stats: SyncStats | null) => void)[] = [];
   
   constructor() {
     this.monitoringService = new MonitoringService(
@@ -58,6 +61,10 @@ class SyncService implements SyncServiceInterface {
     return this.status;
   }
   
+  getLatestStats(): SyncStats | null {
+    return this.latestStats;
+  }
+  
   canSync(): boolean {
     return !!this.sourceDirectoryHandle && !!this.destinationDirectoryHandle;
   }
@@ -93,6 +100,15 @@ class SyncService implements SyncServiceInterface {
       this.setStatus('syncing');
       console.log('Starting sync process...');
       
+      // Initialize stats
+      const stats: SyncStats = {
+        filesCopied: 0,
+        bytesCopied: 0,
+        startTime: Date.now(),
+        endTime: 0,
+        duration: 0
+      };
+      
       // Clear file cache on manual sync to force a full sync
       if (!this.settings.isMonitoring) {
         this.fileCache.clear();
@@ -101,8 +117,20 @@ class SyncService implements SyncServiceInterface {
       await FileUtils.syncFolders(
         this.sourceDirectoryHandle!,
         this.destinationDirectoryHandle!,
-        this.fileCache
+        this.fileCache,
+        stats
       );
+      
+      // Complete stats
+      stats.endTime = Date.now();
+      stats.duration = stats.endTime - stats.startTime;
+      this.latestStats = stats;
+      
+      // Notify stats listeners
+      this.notifyStatsListeners();
+      
+      // Show toast with sync results
+      this.displaySyncResults(stats);
       
       // If we're not monitoring, return to idle after sync
       if (!this.settings.isMonitoring) {
@@ -111,11 +139,38 @@ class SyncService implements SyncServiceInterface {
         this.setStatus('monitoring');
       }
       
-      console.log('Sync completed successfully');
+      console.log('Sync completed successfully', stats);
     } catch (error) {
       this.setStatus('error');
       console.error('Sync failed:', error);
     }
+  }
+  
+  private displaySyncResults(stats: SyncStats): void {
+    // Format the bytes into a readable format (KB, MB, etc.)
+    const formattedBytes = this.formatBytes(stats.bytesCopied);
+    const duration = (stats.duration / 1000).toFixed(2); // Convert to seconds
+    
+    // Show a toast with the results
+    if (stats.filesCopied > 0) {
+      toast.success('Sync completed', {
+        description: `Copied ${stats.filesCopied} files (${formattedBytes}) in ${duration}s`,
+      });
+    } else {
+      toast.info('Sync completed', {
+        description: 'No files needed to be updated',
+      });
+    }
+  }
+  
+  private formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
   
   startMonitoring(): void {
@@ -147,6 +202,15 @@ class SyncService implements SyncServiceInterface {
     };
   }
   
+  addStatsListener(listener: (stats: SyncStats | null) => void): () => void {
+    this.statsListeners.push(listener);
+    
+    // Return function to remove listener
+    return () => {
+      this.statsListeners = this.statsListeners.filter(l => l !== listener);
+    };
+  }
+  
   private setStatus(status: SyncStatus): void {
     this.status = status;
     this.notifyListeners();
@@ -154,6 +218,10 @@ class SyncService implements SyncServiceInterface {
   
   private notifyListeners(): void {
     this.listeners.forEach(listener => listener(this.status));
+  }
+  
+  private notifyStatsListeners(): void {
+    this.statsListeners.forEach(listener => listener(this.latestStats));
   }
 }
 

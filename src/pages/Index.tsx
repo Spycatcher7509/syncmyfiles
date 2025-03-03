@@ -4,8 +4,9 @@ import Header from '@/components/Header';
 import FolderSelector from '@/components/FolderSelector';
 import SyncControls from '@/components/SyncControls';
 import StatusIndicator from '@/components/StatusIndicator';
+import SyncStatistics from '@/components/SyncStatistics';
 import syncService from '@/lib/sync';
-import { SyncStatus } from '@/lib/types';
+import { SyncStatus, SyncStats } from '@/lib/types';
 import { toast } from 'sonner';
 
 const Index = () => {
@@ -14,6 +15,7 @@ const Index = () => {
   const [pollingInterval, setPollingInterval] = useState(5);
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [syncStats, setSyncStats] = useState<SyncStats | null>(null);
   
   useEffect(() => {
     // Initialize with current service settings
@@ -23,9 +25,10 @@ const Index = () => {
     setPollingInterval(settings.pollingInterval);
     setIsMonitoring(settings.isMonitoring);
     setSyncStatus(syncService.getStatus());
+    setSyncStats(syncService.getLatestStats());
     
     // Add listener for status changes
-    const removeListener = syncService.addStatusListener((status) => {
+    const removeStatusListener = syncService.addStatusListener((status) => {
       setSyncStatus(status);
       
       // Show toast notifications for status changes
@@ -44,7 +47,15 @@ const Index = () => {
       }
     });
     
-    return () => removeListener();
+    // Add listener for stats changes
+    const removeStatsListener = syncService.addStatsListener((stats) => {
+      setSyncStats(stats);
+    });
+    
+    return () => {
+      removeStatusListener();
+      removeStatsListener();
+    };
   }, []);
   
   const handleSourcePathChange = (path: string) => {
@@ -111,6 +122,8 @@ const Index = () => {
             />
             
             <StatusIndicator status={syncStatus} />
+            
+            <SyncStatistics stats={syncStats} />
           </div>
         </main>
         

@@ -14,6 +14,14 @@ export interface SyncSettings {
 
 export type SyncStatus = 'idle' | 'syncing' | 'monitoring' | 'error';
 
+export interface SyncStats {
+  filesCopied: number;
+  bytesCopied: number;
+  startTime: number;
+  endTime: number;
+  duration: number;
+}
+
 // Add FileSystem Access API types for TypeScript (if not already defined)
 declare global {
   interface FileSystemHandle {
