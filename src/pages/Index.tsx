@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 import FolderSelector from '@/components/FolderSelector';
 import SyncControls from '@/components/SyncControls';
 import StatusIndicator from '@/components/StatusIndicator';
-import syncService from '@/lib/syncService';
+import syncService from '@/lib/sync';
 import { SyncStatus } from '@/lib/types';
 import { toast } from 'sonner';
 

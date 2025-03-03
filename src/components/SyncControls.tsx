@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Play, Pause, RefreshCw } from 'lucide-react';
-import syncService from '@/lib/syncService';
+import syncService from '@/lib/sync';
 import { SyncStatus } from '@/lib/types';
 
 interface SyncControlsProps {

@@ -2,6 +2,7 @@
 export interface FolderPath {
   path: string;
   name: string;
+  handle?: FileSystemDirectoryHandle; // Only used internally
 }
 
 export interface SyncSettings {

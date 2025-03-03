@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Folder } from 'lucide-react';
-import syncService from '@/lib/syncService';
+import syncService from '@/lib/sync';
 
 interface FolderSelectorProps {
   type: 'source' | 'destination';
