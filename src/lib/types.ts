@@ -52,11 +52,12 @@ declare global {
     truncate(size: number): Promise<void>;
   }
 
+  // Make this conditional to avoid conflicts with existing declarations
   interface Window {
-    showDirectoryPicker(options?: {
+    showDirectoryPicker?: (options?: {
       id?: string;
       mode?: 'read' | 'readwrite';
       startIn?: 'desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos';
-    }): Promise<FileSystemDirectoryHandle>;
+    }) => Promise<FileSystemDirectoryHandle>;
   }
 }

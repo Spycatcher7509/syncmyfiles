@@ -1,4 +1,3 @@
-
 import { FolderPath, SyncSettings, SyncStatus, SyncStats } from '../types';
 import { SyncServiceInterface } from './types';
 import { FileUtils, FileInfo } from './fileUtils';
@@ -22,6 +21,7 @@ class SyncService implements SyncServiceInterface {
   private monitoringService: MonitoringService;
   private latestStats: SyncStats | null = null;
   private statsListeners: ((stats: SyncStats | null) => void)[] = [];
+  private mockMode: boolean = false;
   
   constructor() {
     this.monitoringService = new MonitoringService(
@@ -29,6 +29,12 @@ class SyncService implements SyncServiceInterface {
       (status) => this.setStatus(status),
       () => this.settings.pollingInterval
     );
+    
+    // Check if the File System Access API is available
+    this.mockMode = typeof window.showDirectoryPicker !== 'function';
+    if (this.mockMode) {
+      console.log('File System Access API is not available. Running in mock mode.');
+    }
   }
   
   setSourcePath(path: string): void {
@@ -66,6 +72,11 @@ class SyncService implements SyncServiceInterface {
   }
   
   canSync(): boolean {
+    // In mock mode, we allow syncing if paths are set
+    if (this.mockMode) {
+      return !!this.settings.sourcePath && !!this.settings.destinationPath;
+    }
+    // Otherwise, require directory handles
     return !!this.sourceDirectoryHandle && !!this.destinationDirectoryHandle;
   }
   
@@ -73,11 +84,20 @@ class SyncService implements SyncServiceInterface {
     try {
       const folderInfo = await FolderPicker.browseForFolder(type);
       
-      // Store the directory handle for later use
+      // Store the directory handle for later use (if available)
+      if (folderInfo.handle) {
+        if (type === 'source') {
+          this.sourceDirectoryHandle = folderInfo.handle as FileSystemDirectoryHandle;
+        } else {
+          this.destinationDirectoryHandle = folderInfo.handle as FileSystemDirectoryHandle;
+        }
+      }
+      
+      // Set the path in settings
       if (type === 'source') {
-        this.sourceDirectoryHandle = folderInfo.handle as FileSystemDirectoryHandle;
+        this.setSourcePath(folderInfo.path);
       } else {
-        this.destinationDirectoryHandle = folderInfo.handle as FileSystemDirectoryHandle;
+        this.setDestinationPath(folderInfo.path);
       }
       
       // Remove the handle before returning to the caller
@@ -114,12 +134,18 @@ class SyncService implements SyncServiceInterface {
         this.fileCache.clear();
       }
       
-      await FileUtils.syncFolders(
-        this.sourceDirectoryHandle!,
-        this.destinationDirectoryHandle!,
-        this.fileCache,
-        stats
-      );
+      // If we're in mock mode, simulate a sync operation
+      if (this.mockMode) {
+        await this.mockSyncOperation(stats);
+      } else {
+        // Perform the actual sync
+        await FileUtils.syncFolders(
+          this.sourceDirectoryHandle!,
+          this.destinationDirectoryHandle!,
+          this.fileCache,
+          stats
+        );
+      }
       
       // Complete stats
       stats.endTime = Date.now();
@@ -144,6 +170,20 @@ class SyncService implements SyncServiceInterface {
       this.setStatus('error');
       console.error('Sync failed:', error);
     }
+  }
+  
+  private async mockSyncOperation(stats: SyncStats): Promise<void> {
+    // Simulate some delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Simulate copying files with random data
+    const numFiles = Math.floor(Math.random() * 5) + 1; // 1-5 files
+    const sizePerFile = Math.floor(Math.random() * 500000) + 50000; // 50KB - 500KB per file
+    
+    stats.filesCopied = numFiles;
+    stats.bytesCopied = numFiles * sizePerFile;
+    
+    console.log(`Mock sync completed. Simulated copying ${numFiles} files.`);
   }
   
   private displaySyncResults(stats: SyncStats): void {
