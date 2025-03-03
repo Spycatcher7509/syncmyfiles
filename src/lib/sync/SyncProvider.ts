@@ -1,19 +1,22 @@
 
-import { FileSystemDirectoryHandle } from '../types';
-import { FolderPicker } from './folderPicker';
 import { FolderPath } from '../types';
+import { FolderPicker } from './folderPicker';
+import { MockSyncService } from './MockSyncService';
 import { toast } from 'sonner';
 
 export class SyncProvider {
   private sourceDirectoryHandle: FileSystemDirectoryHandle | null = null;
   private destinationDirectoryHandle: FileSystemDirectoryHandle | null = null;
+  private mockService: MockSyncService;
   private isMockMode = false;
   
   constructor() {
+    this.mockService = new MockSyncService();
+    
     // Check if the File System Access API is available
-    if (typeof window.showDirectoryPicker !== 'function') {
+    this.isMockMode = this.mockService.isMockModeAvailable();
+    if (this.isMockMode) {
       console.log('File System Access API is not available. Using mock mode for testing.');
-      this.isMockMode = true;
     }
   }
   
@@ -39,6 +42,10 @@ export class SyncProvider {
   
   async browseForFolder(type: 'source' | 'destination'): Promise<FolderPath> {
     try {
+      if (this.isMockMode) {
+        return this.mockService.generateMockFolderPath(type);
+      }
+      
       const folderInfo = await FolderPicker.browseForFolder(type);
       
       // Store the directory handle for later use

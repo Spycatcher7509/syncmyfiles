@@ -2,14 +2,17 @@
 import { SyncStats } from '../types';
 import { FileUtils } from './fileUtils';
 import { FileCache } from './fileCache';
-import { generateMockSyncStats } from './utils';
 import { SyncProvider } from './SyncProvider';
+import { MockSyncService } from './MockSyncService';
 import { toast } from 'sonner';
 
 export class SyncEngine {
   private fileCache: FileCache = new FileCache();
+  private mockService: MockSyncService;
   
-  constructor(private syncProvider: SyncProvider) {}
+  constructor(private syncProvider: SyncProvider) {
+    this.mockService = new MockSyncService();
+  }
   
   async executeSync(): Promise<SyncStats> {
     if (!this.syncProvider.canSync()) {
@@ -24,7 +27,7 @@ export class SyncEngine {
       
       if (this.syncProvider.isMockModeEnabled()) {
         // Generate mock sync stats for testing
-        stats = generateMockSyncStats();
+        stats = this.mockService.generateMockSyncStats();
       } else {
         stats = {
           filesCopied: 0,
