@@ -28,7 +28,11 @@ export class SyncEngine {
       if (this.syncProvider.isMockModeEnabled()) {
         // Generate mock sync stats for testing
         stats = this.mockService.generateMockSyncStats();
+        toast.info('Mock sync completed', {
+          description: 'This is a simulated sync. No real files were transferred.',
+        });
       } else {
+        // Using real file system
         stats = {
           filesCopied: 0,
           bytesCopied: 0,

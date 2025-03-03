@@ -1,12 +1,14 @@
 
 import { FolderPath, SyncStats } from '../types';
 import { generateMockSyncStats } from './utils';
+import { FolderPicker } from './folderPicker';
+import { toast } from 'sonner';
 
 export class MockSyncService {
   private mockFolderCounter = 0;
   
   isMockModeAvailable(): boolean {
-    return typeof window.showDirectoryPicker !== 'function';
+    return !FolderPicker.isFileSystemAccessApiSupported();
   }
   
   generateMockFolderPath(type: 'source' | 'destination'): FolderPath {
@@ -16,10 +18,18 @@ export class MockSyncService {
     let mockPath, mockName;
     if (type === 'source') {
       mockName = `Documents_${this.mockFolderCounter}`;
-      mockPath = `/Users/mockuser/${mockName}`;
+      mockPath = `/Source Folder (Mock)`;
     } else {
       mockName = `Backup_${this.mockFolderCounter}`;
-      mockPath = `/Users/mockuser/${mockName}`;
+      mockPath = `/Destination Folder (Mock)`;
+    }
+    
+    // Notify user they're in mock mode
+    if (this.mockFolderCounter <= 2) { // Only show once for source and once for destination
+      toast.info("Using mock mode", {
+        description: "Your browser doesn't support the File System Access API. Using simulated folders instead.",
+        duration: 5000,
+      });
     }
     
     console.log(`Using mock folder path for ${type}: ${mockPath}`);

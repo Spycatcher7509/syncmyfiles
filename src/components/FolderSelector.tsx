@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Folder } from 'lucide-react';
+import { Folder, FolderArchive } from 'lucide-react';
 import syncService from '@/lib/sync';
+import { FolderPicker } from '@/lib/sync/folderPicker';
 
 interface FolderSelectorProps {
   type: 'source' | 'destination';
@@ -15,18 +17,23 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
   onPathChange 
 }) => {
   const [isSelecting, setIsSelecting] = React.useState(false);
+  const isMockMode = React.useMemo(() => !FolderPicker.isFileSystemAccessApiSupported(), []);
   
   const handleBrowse = async () => {
     try {
       setIsSelecting(true);
       const folderPath = await syncService.browseForFolder(type);
       onPathChange(folderPath.path);
-    } catch (error) {
-      console.error('Failed to select folder:', error);
+    } catch (error: any) {
+      if (error.message !== 'Folder selection cancelled') {
+        console.error('Failed to select folder:', error);
+      }
     } finally {
       setIsSelecting(false);
     }
   };
+  
+  const isMockPath = path && path.includes('(Mock)');
   
   return (
     <div className="space-y-3 animate-in animate-fade-in-up" style={{ animationDelay: type === 'source' ? '0ms' : '100ms' }}>
@@ -37,9 +44,16 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
       </div>
       
       <div className="flex space-x-2">
-        <div className="folder-path flex-1 flex items-center">
+        <div className={`folder-path flex-1 flex items-center rounded-md px-3 py-2 ${isMockPath ? 'bg-yellow-100/50 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' : 'bg-muted/50'}`}>
           {path ? (
-            <span className="truncate">{path}</span>
+            <div className="flex items-center space-x-2 truncate">
+              {isMockPath ? (
+                <FolderArchive className="h-4 w-4 flex-shrink-0 text-yellow-600 dark:text-yellow-400" />
+              ) : (
+                <Folder className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+              )}
+              <span className="truncate">{path}</span>
+            </div>
           ) : (
             <span className="text-muted-foreground">No folder selected</span>
           )}
@@ -56,6 +70,12 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
           Browse
         </Button>
       </div>
+      
+      {isMockMode && !path && (
+        <p className="text-xs text-yellow-600 dark:text-yellow-400">
+          Your browser doesn't support file system access. Mock folders will be used instead.
+        </p>
+      )}
     </div>
   );
 };
