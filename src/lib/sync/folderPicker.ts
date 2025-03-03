@@ -23,9 +23,18 @@ export class FolderPicker {
         };
       } else {
         // Fallback for browsers that don't support the File System Access API
-        // Simulate a folder selection with a mock path
-        const mockFolderName = type === 'source' ? 'Source Folder' : 'Destination Folder';
-        const mockPath = `/${mockFolderName} (Mock)`;
+        // Provide more realistic looking paths without the (Mock) label
+        
+        // Create different mock paths for source and destination
+        let mockPath, mockFolderName;
+        
+        if (type === 'source') {
+          mockFolderName = 'Documents';
+          mockPath = `/Users/username/${mockFolderName}`;
+        } else {
+          mockFolderName = 'Backup';
+          mockPath = `/Users/username/${mockFolderName}`;
+        }
         
         console.log(`Using mock folder for ${type} as File System Access API is not supported`);
         
