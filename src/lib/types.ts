@@ -12,3 +12,14 @@ export interface SyncSettings {
 }
 
 export type SyncStatus = 'idle' | 'syncing' | 'monitoring' | 'error';
+
+// Add FileSystem Access API types for TypeScript (if not already defined)
+declare global {
+  interface Window {
+    showDirectoryPicker(options?: {
+      id?: string;
+      mode?: 'read' | 'readwrite';
+      startIn?: 'desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos';
+    }): Promise<FileSystemDirectoryHandle>;
+  }
+}

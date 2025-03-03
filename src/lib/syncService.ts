@@ -12,9 +12,9 @@ class SyncService {
   private status: SyncStatus = 'idle';
   private monitoringInterval: number | null = null;
   private listeners: ((status: SyncStatus) => void)[] = [];
-
-  // In a real implementation, this would use the file system APIs
-  // For demonstration, we'll simulate the file system operations
+  private sourceDirectoryHandle: FileSystemDirectoryHandle | null = null;
+  private destinationDirectoryHandle: FileSystemDirectoryHandle | null = null;
+  private fileCache: Map<string, { lastModified: number, size: number }> = new Map();
   
   setSourcePath(path: string): void {
     this.settings.sourcePath = path;
@@ -47,7 +47,36 @@ class SyncService {
   }
   
   canSync(): boolean {
-    return !!this.settings.sourcePath && !!this.settings.destinationPath;
+    return !!this.sourceDirectoryHandle && !!this.destinationDirectoryHandle;
+  }
+  
+  async browseForFolder(type: 'source' | 'destination'): Promise<FolderPath> {
+    try {
+      // Use the File System Access API to let the user select a directory
+      const directoryHandle = await window.showDirectoryPicker({
+        id: type === 'source' ? 'source-directory' : 'destination-directory',
+        mode: 'readwrite',
+      });
+      
+      // Store the directory handle for later use
+      if (type === 'source') {
+        this.sourceDirectoryHandle = directoryHandle;
+      } else {
+        this.destinationDirectoryHandle = directoryHandle;
+      }
+      
+      // Get the folder name from the handle
+      const folderName = directoryHandle.name;
+      const folderPath = `/${folderName}`;
+      
+      return {
+        path: folderPath,
+        name: folderName
+      };
+    } catch (error) {
+      console.error(`Error selecting ${type} folder:`, error);
+      throw error;
+    }
   }
   
   async syncNow(): Promise<void> {
@@ -59,9 +88,14 @@ class SyncService {
     
     try {
       this.setStatus('syncing');
+      console.log('Starting sync process...');
       
-      // Simulate syncing process
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Clear file cache on manual sync to force a full sync
+      if (!this.settings.isMonitoring) {
+        this.fileCache.clear();
+      }
+      
+      await this.syncFolders(this.sourceDirectoryHandle!, this.destinationDirectoryHandle!);
       
       // If we're not monitoring, return to idle after sync
       if (!this.settings.isMonitoring) {
@@ -74,6 +108,89 @@ class SyncService {
     } catch (error) {
       this.setStatus('error');
       console.error('Sync failed:', error);
+    }
+  }
+  
+  private async syncFolders(
+    sourceDir: FileSystemDirectoryHandle,
+    destDir: FileSystemDirectoryHandle,
+    subPath: string = ""
+  ): Promise<void> {
+    // Get all entries from the source directory
+    for await (const [name, entry] of sourceDir.entries()) {
+      const entryPath = subPath ? `${subPath}/${name}` : name;
+      
+      if (entry.kind === 'file') {
+        await this.syncFile(sourceDir, destDir, name, entryPath);
+      } else if (entry.kind === 'directory') {
+        // Create the corresponding directory in the destination if it doesn't exist
+        let destSubDir: FileSystemDirectoryHandle;
+        try {
+          destSubDir = await destDir.getDirectoryHandle(name);
+        } catch (error) {
+          // Directory doesn't exist, create it
+          destSubDir = await destDir.getDirectoryHandle(name, { create: true });
+        }
+        
+        // Recursively sync subdirectories
+        const sourceSubDir = await sourceDir.getDirectoryHandle(name);
+        await this.syncFolders(sourceSubDir, destSubDir, entryPath);
+      }
+    }
+  }
+  
+  private async syncFile(
+    sourceDir: FileSystemDirectoryHandle,
+    destDir: FileSystemDirectoryHandle,
+    fileName: string,
+    filePath: string
+  ): Promise<void> {
+    try {
+      // Get the file handle from the source directory
+      const sourceFileHandle = await sourceDir.getFileHandle(fileName);
+      const sourceFile = await sourceFileHandle.getFile();
+      
+      // Check if the file has changed using the cache
+      const fileKey = filePath;
+      const cachedInfo = this.fileCache.get(fileKey);
+      const currentInfo = {
+        lastModified: sourceFile.lastModified,
+        size: sourceFile.size
+      };
+      
+      // Skip if the file hasn't changed
+      if (cachedInfo && 
+          cachedInfo.lastModified === currentInfo.lastModified && 
+          cachedInfo.size === currentInfo.size) {
+        return;
+      }
+      
+      // Update the cache
+      this.fileCache.set(fileKey, currentInfo);
+      
+      // Read the source file
+      const fileData = await sourceFile.arrayBuffer();
+      
+      // Create or overwrite the file in the destination directory
+      let destFileHandle: FileSystemFileHandle;
+      try {
+        destFileHandle = await destDir.getFileHandle(fileName);
+      } catch (error) {
+        // File doesn't exist, create it
+        destFileHandle = await destDir.getFileHandle(fileName, { create: true });
+      }
+      
+      // Get a writable stream to the destination file
+      const writable = await destFileHandle.createWritable();
+      
+      // Write the file data
+      await writable.write(fileData);
+      await writable.close();
+      
+      console.log(`Synced file: ${filePath}`);
+    } catch (error) {
+      console.error(`Error syncing file ${filePath}:`, error);
+      throw error;
     }
   }
   
@@ -92,18 +209,13 @@ class SyncService {
       window.clearInterval(this.monitoringInterval);
     }
     
+    // Initial sync
+    this.syncNow();
+    
     // Set up new monitoring interval
     this.monitoringInterval = window.setInterval(() => {
-      // In a real implementation, this would check for file changes
-      // and trigger a sync if needed
       console.log('Checking for changes...');
-      
-      // Simulate occasional syncing for demonstration
-      const shouldSync = Math.random() > 0.7;
-      if (shouldSync) {
-        console.log('Changes detected, syncing...');
-        this.syncNow();
-      }
+      this.syncNow();
     }, this.settings.pollingInterval * 1000);
     
     this.notifyListeners();
@@ -136,30 +248,6 @@ class SyncService {
   
   private notifyListeners(): void {
     this.listeners.forEach(listener => listener(this.status));
-  }
-  
-  // In a real app, these would interact with the file system API
-  // For demo purposes, they simulate the browsing experience
-  
-  browseForFolder(type: 'source' | 'destination'): Promise<FolderPath> {
-    // Simulate folder selection
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const randomId = Math.floor(Math.random() * 1000);
-        
-        if (type === 'source') {
-          resolve({
-            path: `/Users/user/Documents/source-folder-${randomId}`,
-            name: `source-folder-${randomId}`
-          });
-        } else {
-          resolve({
-            path: `/Users/user/Documents/destination-folder-${randomId}`,
-            name: `destination-folder-${randomId}`
-          });
-        }
-      }, 500);
-    });
   }
 }
 
