@@ -1,18 +1,19 @@
 
 import { FolderPath, SyncStatus, SyncStats } from '../types';
-import { SyncServiceInterface } from './types';
+import { SyncServiceInterface } from './syncServiceInterface';
 import { FileUtils } from './fileUtils';
 import { FolderPicker } from './folderPicker';
 import { MonitoringService } from './monitoringService';
 import { SettingsManager } from './settingsManager';
 import { StatusManager } from './statusManager';
 import { StatsManager } from './statsManager';
+import { FileCache, FileInfo } from './fileCache';
 import { toast } from 'sonner';
 
 class SyncService implements SyncServiceInterface {
   private sourceDirectoryHandle: FileSystemDirectoryHandle | null = null;
   private destinationDirectoryHandle: FileSystemDirectoryHandle | null = null;
-  private fileCache: Map<string, FileInfo> = new Map();
+  private fileCache: FileCache = new FileCache();
   private monitoringService: MonitoringService;
   private settingsManager: SettingsManager;
   private statusManager: StatusManager;
@@ -130,7 +131,7 @@ class SyncService implements SyncServiceInterface {
       await FileUtils.syncFolders(
         this.sourceDirectoryHandle!,
         this.destinationDirectoryHandle!,
-        this.fileCache,
+        this.fileCache.getAll(),
         stats
       );
       

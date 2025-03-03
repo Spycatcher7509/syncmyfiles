@@ -2,7 +2,8 @@
 import syncService from './syncService';
 
 export default syncService;
-export * from './types';
+export * from './syncServiceInterface';
+export * from './fileCache';
 export * from './fileUtils';
 export * from './folderPicker';
 export * from './monitoringService';

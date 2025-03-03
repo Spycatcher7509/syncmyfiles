@@ -1,10 +1,6 @@
 
 import { SyncStats } from '../types';
-
-export interface FileInfo {
-  lastModified: number;
-  size: number;
-}
+import { FileInfo } from './fileCache';
 
 export class FileUtils {
   static async syncFile(
