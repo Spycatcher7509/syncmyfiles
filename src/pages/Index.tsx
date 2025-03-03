@@ -6,7 +6,7 @@ import SyncControls from '@/components/SyncControls';
 import StatusIndicator from '@/components/StatusIndicator';
 import syncService from '@/lib/syncService';
 import { SyncStatus } from '@/lib/types';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 const Index = () => {
   const [sourcePath, setSourcePath] = useState('');
