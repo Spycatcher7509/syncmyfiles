@@ -1,22 +1,20 @@
 
 import { FolderPath } from '../types';
 import { FolderPicker } from './folderPicker';
-import { MockSyncService } from './MockSyncService';
 import { toast } from 'sonner';
 
 export class SyncProvider {
   private sourceDirectoryHandle: FileSystemDirectoryHandle | null = null;
   private destinationDirectoryHandle: FileSystemDirectoryHandle | null = null;
-  private mockService: MockSyncService;
-  private isMockMode = false;
   
   constructor() {
-    this.mockService = new MockSyncService();
-    
     // Check if the File System Access API is available
-    this.isMockMode = this.mockService.isMockModeAvailable();
-    if (this.isMockMode) {
-      console.log('File System Access API is not available. Using mock mode for testing.');
+    if (!FolderPicker.isFileSystemAccessApiSupported()) {
+      console.log('File System Access API is not available. App functionality will be limited.');
+      toast.error('Browser not supported', {
+        description: 'Your browser does not support the File System Access API required for this app.',
+        duration: 8000,
+      });
     }
   }
   
@@ -28,24 +26,13 @@ export class SyncProvider {
     return this.destinationDirectoryHandle;
   }
   
-  isMockModeEnabled(): boolean {
-    return this.isMockMode;
-  }
-  
   canSync(): boolean {
-    if (this.isMockMode) {
-      // In mock mode, we just need paths to be set
-      return true;
-    }
     return !!this.sourceDirectoryHandle && !!this.destinationDirectoryHandle;
   }
   
   async browseForFolder(type: 'source' | 'destination'): Promise<FolderPath> {
     try {
-      if (this.isMockMode) {
-        return this.mockService.generateMockFolderPath(type);
-      }
-      
+      // Only use real folder selection
       const folderInfo = await FolderPicker.browseForFolder(type);
       
       // Store the directory handle for later use

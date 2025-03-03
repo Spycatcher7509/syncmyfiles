@@ -3,16 +3,12 @@ import { SyncStats } from '../types';
 import { FileUtils } from './fileUtils';
 import { FileCache } from './fileCache';
 import { SyncProvider } from './SyncProvider';
-import { MockSyncService } from './MockSyncService';
 import { toast } from 'sonner';
 
 export class SyncEngine {
   private fileCache: FileCache = new FileCache();
-  private mockService: MockSyncService;
   
-  constructor(private syncProvider: SyncProvider) {
-    this.mockService = new MockSyncService();
-  }
+  constructor(private syncProvider: SyncProvider) {}
   
   async executeSync(): Promise<SyncStats> {
     if (!this.syncProvider.canSync()) {
@@ -22,33 +18,22 @@ export class SyncEngine {
     try {
       console.log('Starting sync process...');
       
-      // Initialize stats
-      let stats: SyncStats;
+      // Initialize real sync stats
+      const stats: SyncStats = {
+        filesCopied: 0,
+        bytesCopied: 0,
+        startTime: Date.now(),
+        endTime: 0,
+        duration: 0
+      };
       
-      if (this.syncProvider.isMockModeEnabled()) {
-        // Generate mock sync stats for testing
-        stats = this.mockService.generateMockSyncStats();
-        toast.info('Mock sync completed', {
-          description: 'This is a simulated sync. No real files were transferred.',
-        });
-      } else {
-        // Using real file system
-        stats = {
-          filesCopied: 0,
-          bytesCopied: 0,
-          startTime: Date.now(),
-          endTime: 0,
-          duration: 0
-        };
-        
-        // Perform the actual sync
-        await FileUtils.syncFolders(
-          this.syncProvider.getSourceDirectoryHandle()!,
-          this.syncProvider.getDestinationDirectoryHandle()!,
-          this.fileCache.getAll(),
-          stats
-        );
-      }
+      // Perform the actual sync
+      await FileUtils.syncFolders(
+        this.syncProvider.getSourceDirectoryHandle()!,
+        this.syncProvider.getDestinationDirectoryHandle()!,
+        this.fileCache.getAll(),
+        stats
+      );
       
       // Complete stats
       stats.endTime = Date.now();

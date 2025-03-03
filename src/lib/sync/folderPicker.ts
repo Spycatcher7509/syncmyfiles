@@ -12,7 +12,7 @@ export class FolderPicker {
       // Check if File System Access API is supported
       if (!FolderPicker.isFileSystemAccessApiSupported()) {
         console.log('File System Access API is not supported by this browser');
-        throw new Error('Your browser does not support the File System Access API');
+        throw new Error('Your browser does not support the File System Access API required for this app');
       }
       
       // Use the File System Access API to let the user select a directory
