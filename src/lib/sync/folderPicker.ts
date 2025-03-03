@@ -7,8 +7,32 @@ export class FolderPicker {
     return typeof window !== 'undefined' && 'showDirectoryPicker' in window;
   }
   
+  static isRunningInIframe(): boolean {
+    try {
+      return window.self !== window.top;
+    } catch (e) {
+      // If we can't access window.top due to security restrictions,
+      // we're definitely in an iframe
+      return true;
+    }
+  }
+  
   static async browseForFolder(type: 'source' | 'destination'): Promise<FolderPath> {
     try {
+      // Check if running in an iframe
+      if (FolderPicker.isRunningInIframe()) {
+        console.log('Running in iframe, using demo folder data');
+        
+        // Return mock folder data when in an iframe
+        return {
+          path: type === 'source' ? '/Documents/SourceFolder' : '/Documents/DestinationFolder',
+          name: type === 'source' ? 'SourceFolder' : 'DestinationFolder',
+          // We'll still return a handle for type safety, but it won't be used
+          handle: null,
+          isDemo: true
+        };
+      }
+      
       // Check if File System Access API is supported
       if (!FolderPicker.isFileSystemAccessApiSupported()) {
         console.log('File System Access API is not supported by this browser');
@@ -34,6 +58,7 @@ export class FolderPicker {
         path: folderPath,
         name: folderName,
         handle: directoryHandle, // Return the handle for later use
+        isDemo: false
       };
     } catch (error: any) {
       // Handle user cancellation separately from other errors

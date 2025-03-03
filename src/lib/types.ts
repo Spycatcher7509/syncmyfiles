@@ -1,8 +1,8 @@
-
 export interface FolderPath {
   path: string;
   name: string;
-  handle?: FileSystemDirectoryHandle; // Only used internally
+  handle?: FileSystemDirectoryHandle | null; // Only used internally
+  isDemo?: boolean; // Indicates if this is demo data
 }
 
 export interface SyncSettings {
