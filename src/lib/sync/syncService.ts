@@ -1,41 +1,34 @@
+
 import { FolderPath, SyncStatus, SyncStats } from '../types';
 import { SyncServiceInterface } from './syncServiceInterface';
-import { FileUtils } from './fileUtils';
-import { FolderPicker } from './folderPicker';
 import { MonitoringService } from './monitoringService';
 import { SettingsManager } from './settingsManager';
 import { StatusManager } from './statusManager';
 import { StatsManager } from './statsManager';
-import { FileCache, FileInfo } from './fileCache';
+import { SyncProvider } from './SyncProvider';
+import { SyncEngine } from './SyncEngine';
 import { toast } from 'sonner';
-import { generateMockSyncStats } from './utils';
 
 class SyncService implements SyncServiceInterface {
-  private sourceDirectoryHandle: FileSystemDirectoryHandle | null = null;
-  private destinationDirectoryHandle: FileSystemDirectoryHandle | null = null;
-  private fileCache: FileCache = new FileCache();
+  private syncProvider: SyncProvider;
+  private syncEngine: SyncEngine;
   private monitoringService: MonitoringService;
   private settingsManager: SettingsManager;
   private statusManager: StatusManager;
   private statsManager: StatsManager;
-  private isMockMode = false;
   
   constructor() {
     this.settingsManager = new SettingsManager();
     this.statusManager = new StatusManager();
     this.statsManager = new StatsManager();
+    this.syncProvider = new SyncProvider();
+    this.syncEngine = new SyncEngine(this.syncProvider);
     
     this.monitoringService = new MonitoringService(
       () => this.syncNow(),
       (status) => this.statusManager.setStatus(status),
       () => this.settingsManager.getSettings().pollingInterval
     );
-    
-    // Check if the File System Access API is available
-    if (typeof window.showDirectoryPicker !== 'function') {
-      console.log('File System Access API is not available. Using mock mode for testing.');
-      this.isMockMode = true;
-    }
   }
   
   setSourcePath(path: string): void {
@@ -69,26 +62,12 @@ class SyncService implements SyncServiceInterface {
   }
   
   canSync(): boolean {
-    if (this.isMockMode) {
-      // In mock mode, we just need paths to be set
-      const settings = this.settingsManager.getSettings();
-      return !!settings.sourcePath && !!settings.destinationPath;
-    }
-    return !!this.sourceDirectoryHandle && !!this.destinationDirectoryHandle;
+    return this.syncProvider.canSync();
   }
   
   async browseForFolder(type: 'source' | 'destination'): Promise<FolderPath> {
     try {
-      const folderInfo = await FolderPicker.browseForFolder(type);
-      
-      // Store the directory handle for later use
-      if (folderInfo.handle) {
-        if (type === 'source') {
-          this.sourceDirectoryHandle = folderInfo.handle as FileSystemDirectoryHandle;
-        } else {
-          this.destinationDirectoryHandle = folderInfo.handle as FileSystemDirectoryHandle;
-        }
-      }
+      const folderInfo = await this.syncProvider.browseForFolder(type);
       
       // Set the path in settings
       if (type === 'source') {
@@ -97,9 +76,7 @@ class SyncService implements SyncServiceInterface {
         this.setDestinationPath(folderInfo.path);
       }
       
-      // Remove the handle before returning to the caller
-      const { handle, ...result } = folderInfo;
-      return result;
+      return folderInfo;
     } catch (error) {
       console.error(`Error selecting ${type} folder:`, error);
       throw error;
@@ -118,43 +95,17 @@ class SyncService implements SyncServiceInterface {
     
     try {
       this.statusManager.setStatus('syncing');
-      console.log('Starting sync process...');
       
-      // Initialize stats
-      let stats: SyncStats;
-      
-      if (this.isMockMode) {
-        // Generate mock sync stats for testing
-        stats = generateMockSyncStats();
-      } else {
-        stats = {
-          filesCopied: 0,
-          bytesCopied: 0,
-          startTime: Date.now(),
-          endTime: 0,
-          duration: 0
-        };
-        
-        // Clear file cache on manual sync to force a full sync
-        if (!this.settingsManager.getSettings().isMonitoring) {
-          this.fileCache.clear();
-        }
-        
-        // Perform the actual sync
-        await FileUtils.syncFolders(
-          this.sourceDirectoryHandle!,
-          this.destinationDirectoryHandle!,
-          this.fileCache.getAll(),
-          stats
-        );
+      // Clear file cache on manual sync to force a full sync
+      if (!this.settingsManager.getSettings().isMonitoring) {
+        this.syncEngine.clearFileCache();
       }
       
-      // Complete stats
-      stats.endTime = Date.now();
-      stats.duration = stats.endTime - stats.startTime;
-      this.statsManager.setStats(stats);
+      // Execute the sync operation
+      const stats = await this.syncEngine.executeSync();
       
-      // Show toast with sync results
+      // Store and display the results
+      this.statsManager.setStats(stats);
       this.statsManager.displaySyncResults(stats);
       
       // If we're not monitoring, return to idle after sync
@@ -165,7 +116,6 @@ class SyncService implements SyncServiceInterface {
         this.statusManager.setStatus('monitoring');
       }
       
-      console.log('Sync completed successfully', stats);
     } catch (error) {
       this.statusManager.setStatus('error');
       console.error('Sync failed:', error);
