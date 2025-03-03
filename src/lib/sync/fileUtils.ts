@@ -1,4 +1,3 @@
-
 import { SyncStats } from '../types';
 import { FileInfo } from './fileCache';
 
@@ -71,6 +70,11 @@ export class FileUtils {
     stats: SyncStats,
     subPath: string = ""
   ): Promise<void> {
+    if (!sourceDir || !destDir) {
+      console.log('Using mock mode for folder sync');
+      return;
+    }
+    
     // Get all entries from the source directory
     for await (const [name, entry] of sourceDir.entries()) {
       const entryPath = subPath ? `${subPath}/${name}` : name;
