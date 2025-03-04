@@ -2,6 +2,7 @@
 import { SyncStats } from '../types';
 import { formatBytes } from './utils';
 import { toast } from 'sonner';
+import { logService } from './logService';
 
 export class StatsManager {
   private latestStats: SyncStats | null = null;
@@ -29,6 +30,15 @@ export class StatsManager {
     // Format the bytes into a readable format (KB, MB, etc.)
     const formattedBytes = formatBytes(stats.bytesCopied);
     const duration = (stats.duration / 1000).toFixed(2); // Convert to seconds
+    
+    // Log the results
+    logService.log(
+      'info', 
+      `Move operation completed with ${stats.filesCopied} files (${formattedBytes}) in ${duration}s`,
+      undefined,
+      undefined,
+      stats
+    );
     
     // Show a toast with the results
     if (stats.filesCopied > 0) {

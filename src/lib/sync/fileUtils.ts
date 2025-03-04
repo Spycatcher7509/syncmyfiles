@@ -1,6 +1,7 @@
 
 import { SyncStats } from '../types';
 import { FileInfo } from './fileCache';
+import { logService } from './logService';
 
 export class FileUtils {
   static async syncFile(
@@ -34,6 +35,9 @@ export class FileUtils {
       // Update the cache
       fileCache.set(fileKey, currentInfo);
       
+      // Log the file operation start
+      logService.log('info', 'Starting file move operation', filePath);
+      
       // Read the source file
       const fileData = await sourceFile.arrayBuffer();
       
@@ -58,9 +62,9 @@ export class FileUtils {
       try {
         // We need to use the removeEntry method on the parent directory
         await sourceDir.removeEntry(fileName);
-        console.log(`Moved file: ${filePath}`);
+        logService.log('move', 'File successfully moved', filePath);
       } catch (error) {
-        console.error(`Error removing source file ${filePath}:`, error);
+        logService.log('error', 'Error removing source file after copy', filePath, error);
         // We don't throw here because the file was already copied successfully
         // Just log the error and continue
       }
@@ -69,6 +73,7 @@ export class FileUtils {
       stats.filesCopied++;
       stats.bytesCopied += sourceFile.size;
     } catch (error) {
+      logService.log('error', 'Error during file move operation', filePath, error);
       console.error(`Error syncing file ${filePath}:`, error);
       throw error;
     }

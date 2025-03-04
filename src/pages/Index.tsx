@@ -5,6 +5,7 @@ import FolderSelector from '@/components/FolderSelector';
 import SyncControls from '@/components/SyncControls';
 import StatusIndicator from '@/components/StatusIndicator';
 import SyncStatistics from '@/components/SyncStatistics';
+import LogViewer from '@/components/LogViewer';
 import syncService from '@/lib/sync';
 import { SyncStatus, SyncStats } from '@/lib/types';
 import { toast } from 'sonner';
@@ -131,6 +132,9 @@ const Index = () => {
           <p>FolderWhisper &copy; {new Date().getFullYear()} - Elegant file synchronization</p>
         </footer>
       </div>
+      
+      {/* Add the LogViewer component */}
+      <LogViewer />
     </div>
   );
 };
