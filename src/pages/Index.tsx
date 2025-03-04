@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import FolderSelector from '@/components/FolderSelector';
@@ -34,16 +33,16 @@ const Index = () => {
       
       // Show toast notifications for status changes
       if (status === 'syncing') {
-        toast.info('Syncing files...', {
-          description: 'Copying files between folders',
+        toast.info('Moving files...', {
+          description: 'Moving files from source to destination',
         });
       } else if (status === 'monitoring') {
-        toast.success('Sync completed', {
-          description: 'Files synchronized successfully',
+        toast.success('Move completed', {
+          description: 'Files moved successfully',
         });
       } else if (status === 'error') {
-        toast.error('Sync error', {
-          description: 'Failed to synchronize files',
+        toast.error('Move error', {
+          description: 'Failed to move files',
         });
       }
     });
@@ -133,7 +132,6 @@ const Index = () => {
         </footer>
       </div>
       
-      {/* Add the LogViewer component */}
       <LogViewer />
     </div>
   );

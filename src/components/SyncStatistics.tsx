@@ -27,7 +27,7 @@ const SyncStatistics: React.FC<SyncStatisticsProps> = ({ stats }) => {
     return (ms / 1000).toFixed(2) + 's';
   };
 
-  // Don't show if no files were copied
+  // Don't show if no files were moved
   if (stats.filesCopied === 0) {
     return null;
   }

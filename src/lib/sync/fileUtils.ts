@@ -29,6 +29,7 @@ export class FileUtils {
       if (cachedInfo && 
           cachedInfo.lastModified === currentInfo.lastModified && 
           cachedInfo.size === currentInfo.size) {
+        logService.log('info', 'File unchanged, skipping', filePath);
         return;
       }
       
@@ -58,20 +59,24 @@ export class FileUtils {
       await writable.close();
       
       // After successful write to destination, remove the file from source
-      // This is the new part that changes copying to moving
       try {
-        // We need to use the removeEntry method on the parent directory
+        console.log(`Attempting to remove source file: ${fileName}`);
+        // Use the removeEntry method on the parent directory
         await sourceDir.removeEntry(fileName);
+        console.log(`Source file ${fileName} removed successfully`);
         logService.log('move', 'File successfully moved', filePath);
+        
+        // Update statistics
+        stats.filesCopied++;
+        stats.bytesCopied += sourceFile.size;
       } catch (error) {
+        console.error(`Error removing source file ${fileName}:`, error);
         logService.log('error', 'Error removing source file after copy', filePath, error);
-        // We don't throw here because the file was already copied successfully
-        // Just log the error and continue
+        
+        // Since we failed to remove the source file, still count it as a copy
+        stats.filesCopied++;
+        stats.bytesCopied += sourceFile.size;
       }
-      
-      // Update statistics
-      stats.filesCopied++;
-      stats.bytesCopied += sourceFile.size;
     } catch (error) {
       logService.log('error', 'Error during file move operation', filePath, error);
       console.error(`Error syncing file ${filePath}:`, error);
@@ -91,6 +96,8 @@ export class FileUtils {
       return;
     }
     
+    console.log(`Syncing folder: ${subPath || 'root'}`);
+    
     // Get all entries from the source directory
     for await (const [name, entry] of sourceDir.entries()) {
       const entryPath = subPath ? `${subPath}/${name}` : name;
@@ -104,12 +111,32 @@ export class FileUtils {
           destSubDir = await destDir.getDirectoryHandle(name);
         } catch (error) {
           // Directory doesn't exist, create it
+          console.log(`Creating directory in destination: ${entryPath}`);
           destSubDir = await destDir.getDirectoryHandle(name, { create: true });
         }
         
         // Recursively sync subdirectories
         const sourceSubDir = await sourceDir.getDirectoryHandle(name);
         await FileUtils.syncFolders(sourceSubDir, destSubDir, fileCache, stats, entryPath);
+        
+        // After all files in the directory have been moved, try to remove the empty directory
+        try {
+          // Check if directory is empty before attempting to remove it
+          let isEmpty = true;
+          for await (const _ of sourceSubDir.entries()) {
+            isEmpty = false;
+            break;
+          }
+          
+          if (isEmpty) {
+            console.log(`Removing empty source directory: ${entryPath}`);
+            await sourceDir.removeEntry(name);
+            logService.log('info', 'Empty directory removed', entryPath);
+          }
+        } catch (error) {
+          console.error(`Error removing source directory ${entryPath}:`, error);
+          logService.log('error', 'Error removing empty source directory', entryPath, error);
+        }
       }
     }
   }
