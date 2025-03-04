@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # Git Clone and Sync Automation Script
@@ -56,13 +55,18 @@ get_user_selection() {
   local valid_input=false
   local selection
   
+  # Display menu options clearly with a header
+  echo "========================================"
+  print_blue "🔧 Git Operations Menu"
+  echo "========================================"
+  echo "1) Push local changes to GitHub"
+  echo "2) Pull latest changes from GitHub"
+  echo "3) Clone a new repository"
+  echo "4) List tracked repositories"
+  echo "5) Exit"
+  echo "========================================"
+  
   until $valid_input; do
-    print_yellow "Please select an option:"
-    echo "1) Push local changes to GitHub"
-    echo "2) Pull latest changes from GitHub"
-    echo "3) Clone a new repository"
-    echo "4) List tracked repositories"
-    echo "5) Exit"
     read -p "Enter option (1-5): " selection
     
     case $selection in
