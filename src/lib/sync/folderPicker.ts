@@ -16,6 +16,46 @@ export class FolderPicker {
       return true;
     }
   }
+
+  static checkAndNotifyApiSupport(): { isSupported: boolean; reason?: string } {
+    // Check if running in an iframe first - some browsers block the API in iframes
+    if (this.isRunningInIframe()) {
+      toast.info('Running in iframe mode', {
+        description: 'File system access is limited in iframes. Using demo mode.',
+        duration: 5000,
+      });
+      return { 
+        isSupported: false, 
+        reason: 'iframe' 
+      };
+    }
+
+    // Check for API support
+    if (!this.isFileSystemAccessApiSupported()) {
+      toast.error('Browser not supported', {
+        description: 'Your browser doesn\'t support the File System Access API. Try using Chrome, Edge, or Opera.',
+        duration: 8000,
+      });
+      return { 
+        isSupported: false, 
+        reason: 'api_unavailable' 
+      };
+    }
+
+    // Additional check for secure context (HTTPS or localhost)
+    if (typeof window !== 'undefined' && window.isSecureContext === false) {
+      toast.error('Insecure context', {
+        description: 'File System Access API requires HTTPS or localhost. Your connection is not secure.',
+        duration: 8000,
+      });
+      return { 
+        isSupported: false, 
+        reason: 'insecure_context' 
+      };
+    }
+
+    return { isSupported: true };
+  }
   
   static async browseForFolder(type: 'source' | 'destination'): Promise<FolderPath> {
     try {

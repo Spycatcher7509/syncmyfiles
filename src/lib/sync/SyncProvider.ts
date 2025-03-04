@@ -9,24 +9,18 @@ export class SyncProvider {
   private isDemoMode: boolean = false;
   
   constructor() {
-    // Check if running in iframe first
-    if (FolderPicker.isRunningInIframe()) {
-      console.log('Running in iframe, demo mode will be used');
-      this.isDemoMode = true;
-      toast.info('Demo Mode Active', {
-        description: 'Running in demo mode because the app is in an iframe. File selection will be simulated.',
-        duration: 8000,
-      });
-      return;
-    }
+    // Use the enhanced API support check
+    const apiSupport = FolderPicker.checkAndNotifyApiSupport();
+    this.isDemoMode = !apiSupport.isSupported;
     
-    // Check if the File System Access API is available
-    if (!FolderPicker.isFileSystemAccessApiSupported()) {
-      console.log('File System Access API is not available. App functionality will be limited.');
-      toast.error('Browser not supported', {
-        description: 'Your browser does not support the File System Access API required for this app.',
-        duration: 8000,
-      });
+    if (this.isDemoMode) {
+      if (apiSupport.reason === 'iframe') {
+        console.log('Running in iframe, demo mode will be used');
+      } else {
+        console.log('File System Access API not available. App will use demo mode.');
+      }
+    } else {
+      console.log('File System Access API is available. Full functionality enabled.');
     }
   }
   

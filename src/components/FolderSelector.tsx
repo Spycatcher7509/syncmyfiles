@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Folder } from 'lucide-react';
+import { Folder, AlertCircle, Info } from 'lucide-react';
 import syncService from '@/lib/sync';
 import { FolderPicker } from '@/lib/sync/folderPicker';
+import { toast } from 'sonner';
 
 interface FolderSelectorProps {
   type: 'source' | 'destination';
@@ -17,13 +18,32 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
   onPathChange 
 }) => {
   const [isSelecting, setIsSelecting] = React.useState(false);
-  const isApiSupported = React.useMemo(() => FolderPicker.isFileSystemAccessApiSupported(), []);
+  const [apiSupport, setApiSupport] = useState<{
+    isSupported: boolean;
+    reason?: string;
+    checked: boolean;
+  }>({ isSupported: false, checked: false });
+  
+  // Check API support on component mount
+  useEffect(() => {
+    const supportStatus = FolderPicker.checkAndNotifyApiSupport();
+    setApiSupport({
+      ...supportStatus,
+      checked: true
+    });
+  }, []);
   
   const handleBrowse = async () => {
     try {
       setIsSelecting(true);
       const folderPath = await syncService.browseForFolder(type);
       onPathChange(folderPath.path);
+      
+      if (folderPath.isDemo) {
+        toast.info('Demo mode active', {
+          description: 'Using simulated folder paths for demonstration',
+        });
+      }
     } catch (error: any) {
       if (error.message !== 'Folder selection cancelled') {
         console.error('Failed to select folder:', error);
@@ -31,6 +51,31 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
     } finally {
       setIsSelecting(false);
     }
+  };
+  
+  const renderApiSupportMessage = () => {
+    if (!apiSupport.checked) return null;
+    
+    if (!apiSupport.isSupported) {
+      let message = 'Your browser doesn\'t support file system access.';
+      let icon = <AlertCircle className="h-4 w-4 text-red-500 mr-1" />;
+      
+      if (apiSupport.reason === 'iframe') {
+        message = 'Running in an iframe - using demo mode instead.';
+        icon = <Info className="h-4 w-4 text-amber-500 mr-1" />;
+      } else if (apiSupport.reason === 'insecure_context') {
+        message = 'File System Access requires HTTPS or localhost.';
+      }
+      
+      return (
+        <div className="flex items-center text-xs mt-2 text-red-600 dark:text-red-400">
+          {icon}
+          <span>{message}</span>
+        </div>
+      );
+    }
+    
+    return null;
   };
   
   return (
@@ -57,19 +102,18 @@ const FolderSelector: React.FC<FolderSelectorProps> = ({
           variant="outline" 
           size="sm" 
           onClick={handleBrowse}
-          disabled={isSelecting || !isApiSupported}
+          disabled={isSelecting || (!apiSupport.isSupported && apiSupport.reason !== 'iframe')}
           className="flex-shrink-0 transition-all hover:scale-105"
+          title={!apiSupport.isSupported && apiSupport.reason !== 'iframe' ? 
+            'Your browser doesn\'t support the File System Access API' : 
+            'Browse for a folder'}
         >
           <Folder className="h-4 w-4 mr-1" />
           Browse
         </Button>
       </div>
       
-      {!isApiSupported && (
-        <p className="text-xs text-red-600 dark:text-red-400">
-          Your browser doesn't support file system access. This app requires the File System Access API.
-        </p>
-      )}
+      {renderApiSupportMessage()}
     </div>
   );
 };
