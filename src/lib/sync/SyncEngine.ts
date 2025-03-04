@@ -39,7 +39,7 @@ export class SyncEngine {
         duration: 0
       };
       
-      // Perform the actual sync
+      // Perform the actual sync (now moves instead of copies)
       await FileUtils.syncFolders(
         this.syncProvider.getSourceDirectoryHandle()!,
         this.syncProvider.getDestinationDirectoryHandle()!,
@@ -51,7 +51,7 @@ export class SyncEngine {
       stats.endTime = Date.now();
       stats.duration = stats.endTime - stats.startTime;
       
-      console.log('Sync completed successfully', stats);
+      console.log('Sync (move) completed successfully', stats);
       return stats;
       
     } catch (error) {
@@ -62,7 +62,7 @@ export class SyncEngine {
   
   // Simulate a sync operation for demo mode
   private async executeDemoSync(): Promise<SyncStats> {
-    console.log('Executing demo sync');
+    console.log('Executing demo sync (move)');
     
     // Create a delay to simulate sync operation
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -76,7 +76,7 @@ export class SyncEngine {
       duration: 1500
     };
     
-    console.log('Demo sync completed', this.demoStats);
+    console.log('Demo sync (move) completed', this.demoStats);
     return { ...this.demoStats };
   }
   

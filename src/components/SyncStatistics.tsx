@@ -34,10 +34,10 @@ const SyncStatistics: React.FC<SyncStatisticsProps> = ({ stats }) => {
 
   return (
     <div className="bg-muted/50 rounded-lg p-4 mt-4 animate-in animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-      <h3 className="text-sm font-medium mb-2">Last Sync Results</h3>
+      <h3 className="text-sm font-medium mb-2">Last Move Results</h3>
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="flex items-center">
-          <span className="text-muted-foreground mr-2">Files copied:</span>
+          <span className="text-muted-foreground mr-2">Files moved:</span>
           <span className="font-medium">{stats.filesCopied}</span>
         </div>
         <div className="flex items-center">

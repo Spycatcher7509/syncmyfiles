@@ -1,3 +1,4 @@
+
 import { SyncStats } from '../types';
 import { FileInfo } from './fileCache';
 
@@ -52,11 +53,21 @@ export class FileUtils {
       await writable.write(fileData);
       await writable.close();
       
+      // After successful write to destination, remove the file from source
+      // This is the new part that changes copying to moving
+      try {
+        // We need to use the removeEntry method on the parent directory
+        await sourceDir.removeEntry(fileName);
+        console.log(`Moved file: ${filePath}`);
+      } catch (error) {
+        console.error(`Error removing source file ${filePath}:`, error);
+        // We don't throw here because the file was already copied successfully
+        // Just log the error and continue
+      }
+      
       // Update statistics
       stats.filesCopied++;
       stats.bytesCopied += sourceFile.size;
-      
-      console.log(`Synced file: ${filePath}`);
     } catch (error) {
       console.error(`Error syncing file ${filePath}:`, error);
       throw error;

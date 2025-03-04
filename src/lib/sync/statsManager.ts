@@ -32,12 +32,12 @@ export class StatsManager {
     
     // Show a toast with the results
     if (stats.filesCopied > 0) {
-      toast.success('Sync completed', {
-        description: `Copied ${stats.filesCopied} files (${formattedBytes}) in ${duration}s`,
+      toast.success('Move completed', {
+        description: `Moved ${stats.filesCopied} files (${formattedBytes}) in ${duration}s`,
       });
     } else {
       toast.info('Sync completed', {
-        description: 'No files needed to be updated',
+        description: 'No files needed to be moved',
       });
     }
   }
