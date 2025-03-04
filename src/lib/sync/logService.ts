@@ -2,7 +2,7 @@
 import { SyncStats } from '../types';
 
 export interface LogEntry {
-  action: 'move' | 'error' | 'info' | 'monitor_start' | 'monitor_stop' | 'target_path_sync';
+  action: 'move' | 'error' | 'info' | 'monitor_start' | 'monitor_stop';
   timestamp: number;
   details: string;
   path?: string;
@@ -40,34 +40,6 @@ export class LogService {
     
     // Also log to console for development
     console.log(`[${action.toUpperCase()}] ${details}${path ? ` - ${path}` : ''}${error ? ` - Error: ${entry.error}` : ''}`);
-    
-    // Special logging for target path syncs
-    if (path === '/Users/dassgehtdichnichtan/syncmyfiles' || 
-        (details.includes('/Users/dassgehtdichnichtan/syncmyfiles') && 
-         (action === 'move' || action === 'info'))) {
-      this.logTargetPathSync(details, stats);
-    }
-    
-    // Notify listeners
-    this.notifyListeners();
-  }
-  
-  logTargetPathSync(details: string, stats?: Partial<SyncStats>): void {
-    const entry: LogEntry = {
-      action: 'target_path_sync',
-      timestamp: Date.now(),
-      details: `Target path sync: ${details}`,
-      path: '/Users/dassgehtdichnichtan/syncmyfiles',
-      stats
-    };
-    
-    this.logs.unshift(entry);
-    console.log(`[TARGET_PATH_SYNC] ${entry.details}`);
-    
-    // Limit log size
-    if (this.logs.length > this.maxLogEntries) {
-      this.logs = this.logs.slice(0, this.maxLogEntries);
-    }
     
     // Notify listeners
     this.notifyListeners();

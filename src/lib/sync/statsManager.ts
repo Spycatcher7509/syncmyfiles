@@ -31,12 +31,6 @@ export class StatsManager {
     const formattedBytes = formatBytes(stats.bytesCopied);
     const duration = (stats.duration / 1000).toFixed(2); // Convert to seconds
     
-    // Get current settings to check if we're syncing to the target folder
-    const settingsManager = new SettingsManager();
-    const settings = settingsManager.getSettings();
-    const targetPath = '/Users/dassgehtdichnichtan/syncmyfiles';
-    const isTargetPathInvolved = settings.sourcePath === targetPath || settings.destinationPath === targetPath;
-    
     // Log the results
     logService.log(
       'info', 
@@ -48,14 +42,9 @@ export class StatsManager {
     
     // Show a toast with the results
     if (stats.filesCopied > 0) {
-      let description = `Moved ${stats.filesCopied} files (${formattedBytes}) in ${duration}s`;
-      
-      // Add information about the target path if it's involved
-      if (isTargetPathInvolved) {
-        description += `\n${targetPath} ${settings.sourcePath === targetPath ? 'is the source' : 'is updated with latest files'}`;
-      }
-      
-      toast.success('Move completed', { description });
+      toast.success('Move completed', {
+        description: `Moved ${stats.filesCopied} files (${formattedBytes}) in ${duration}s`,
+      });
     } else {
       toast.info('Sync completed', {
         description: 'No files needed to be moved',

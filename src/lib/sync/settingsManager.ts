@@ -52,11 +52,6 @@ export class SettingsManager {
       if (savedSettings) {
         this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
       }
-      
-      // Set default source path if not already set
-      if (!this.settings.sourcePath) {
-        this.settings.sourcePath = '/Users/dassgehtdichnichtan/syncmyfiles';
-      }
     } catch (error) {
       console.error('Failed to load settings from localStorage:', error);
     }
