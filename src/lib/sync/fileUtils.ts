@@ -42,10 +42,12 @@ export class FileUtils {
       // Read the source file
       const fileData = await sourceFile.arrayBuffer();
       
-      // Create or overwrite the file in the destination directory
+      // Check if the file already exists in the destination directory
       let destFileHandle: FileSystemFileHandle;
+      let fileExists = false;
       try {
         destFileHandle = await destDir.getFileHandle(fileName);
+        fileExists = true;
       } catch (error) {
         // File doesn't exist, create it
         destFileHandle = await destDir.getFileHandle(fileName, { create: true });
@@ -98,46 +100,62 @@ export class FileUtils {
     
     console.log(`Syncing folder: ${subPath || 'root'}`);
     
-    // Get all entries from the source directory
-    for await (const [name, entry] of sourceDir.entries()) {
-      const entryPath = subPath ? `${subPath}/${name}` : name;
-      
-      if (entry.kind === 'file') {
-        await FileUtils.syncFile(sourceDir, destDir, name, entryPath, fileCache, stats);
-      } else if (entry.kind === 'directory') {
-        // Create the corresponding directory in the destination if it doesn't exist
-        let destSubDir: FileSystemDirectoryHandle;
-        try {
-          destSubDir = await destDir.getDirectoryHandle(name);
-        } catch (error) {
-          // Directory doesn't exist, create it
-          console.log(`Creating directory in destination: ${entryPath}`);
-          destSubDir = await destDir.getDirectoryHandle(name, { create: true });
-        }
+    try {
+      // Get all entries from the source directory
+      for await (const [name, entry] of sourceDir.entries()) {
+        const entryPath = subPath ? `${subPath}/${name}` : name;
         
-        // Recursively sync subdirectories
-        const sourceSubDir = await sourceDir.getDirectoryHandle(name);
-        await FileUtils.syncFolders(sourceSubDir, destSubDir, fileCache, stats, entryPath);
-        
-        // After all files in the directory have been moved, try to remove the empty directory
         try {
-          // Check if directory is empty before attempting to remove it
-          let isEmpty = true;
-          for await (const _ of sourceSubDir.entries()) {
-            isEmpty = false;
-            break;
-          }
-          
-          if (isEmpty) {
-            console.log(`Removing empty source directory: ${entryPath}`);
-            await sourceDir.removeEntry(name);
-            logService.log('info', 'Empty directory removed', entryPath);
+          if (entry.kind === 'file') {
+            await FileUtils.syncFile(sourceDir, destDir, name, entryPath, fileCache, stats);
+          } else if (entry.kind === 'directory') {
+            // Create the corresponding directory in the destination if it doesn't exist
+            let destSubDir: FileSystemDirectoryHandle;
+            try {
+              destSubDir = await destDir.getDirectoryHandle(name);
+            } catch (error) {
+              // Directory doesn't exist, create it
+              console.log(`Creating directory in destination: ${entryPath}`);
+              destSubDir = await destDir.getDirectoryHandle(name, { create: true });
+            }
+            
+            // Recursively sync subdirectories
+            const sourceSubDir = await sourceDir.getDirectoryHandle(name);
+            await FileUtils.syncFolders(sourceSubDir, destSubDir, fileCache, stats, entryPath);
+            
+            // After all files in the directory have been moved, try to remove the empty directory
+            try {
+              // Check if directory is empty before attempting to remove it
+              let isEmpty = true;
+              for await (const _ of sourceSubDir.entries()) {
+                isEmpty = false;
+                break;
+              }
+              
+              if (isEmpty) {
+                console.log(`Removing empty source directory: ${entryPath}`);
+                await sourceDir.removeEntry(name);
+                logService.log('info', 'Empty directory removed', entryPath);
+              } else {
+                console.log(`Directory not empty, skipping removal: ${entryPath}`);
+                logService.log('info', 'Directory not empty, skipping removal', entryPath);
+              }
+            } catch (error) {
+              console.error(`Error checking/removing source directory ${entryPath}:`, error);
+              logService.log('error', 'Error checking/removing source directory', entryPath, error);
+            }
           }
         } catch (error) {
-          console.error(`Error removing source directory ${entryPath}:`, error);
-          logService.log('error', 'Error removing empty source directory', entryPath, error);
+          // Log the error but continue with other files/directories
+          console.error(`Error processing ${entryPath}:`, error);
+          logService.log('error', `Error processing entry: ${error instanceof Error ? error.message : 'Unknown error'}`, entryPath);
+          // Don't throw here to allow other files to be processed
         }
       }
+    } catch (error) {
+      console.error(`Error syncing folder ${subPath || 'root'}:`, error);
+      logService.log('error', 'Error syncing folder', subPath || 'root', error);
+      throw error;
     }
   }
 }
