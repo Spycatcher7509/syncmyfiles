@@ -14,8 +14,17 @@ export class SyncEngine {
     endTime: 0,
     duration: 0
   };
+  private forceRemove: boolean = false;
   
   constructor(private syncProvider: SyncProvider) {}
+  
+  setForceRemove(value: boolean): void {
+    this.forceRemove = value;
+  }
+  
+  getForceRemove(): boolean {
+    return this.forceRemove;
+  }
   
   async executeSync(): Promise<SyncStats> {
     if (!this.syncProvider.canSync()) {
@@ -44,7 +53,9 @@ export class SyncEngine {
         this.syncProvider.getSourceDirectoryHandle()!,
         this.syncProvider.getDestinationDirectoryHandle()!,
         this.fileCache.getAll(),
-        stats
+        stats,
+        "",
+        this.forceRemove
       );
       
       // Complete stats

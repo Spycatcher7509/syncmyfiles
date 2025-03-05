@@ -49,6 +49,15 @@ class SyncService implements SyncServiceInterface {
     }
   }
   
+  setForceRemove(value: boolean): void {
+    this.settingsManager.setForceRemove(value);
+    this.syncEngine.setForceRemove(value);
+  }
+  
+  getForceRemove(): boolean {
+    return this.settingsManager.getSettings().forceRemove;
+  }
+  
   getSettings() {
     return this.settingsManager.getSettings();
   }
@@ -100,6 +109,9 @@ class SyncService implements SyncServiceInterface {
       if (!this.settingsManager.getSettings().isMonitoring) {
         this.syncEngine.clearFileCache();
       }
+      
+      // Apply the force remove setting from settings
+      this.syncEngine.setForceRemove(this.settingsManager.getSettings().forceRemove);
       
       // Execute the sync operation
       const stats = await this.syncEngine.executeSync();

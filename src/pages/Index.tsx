@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import FolderSelector from '@/components/FolderSelector';
@@ -14,6 +15,7 @@ const Index = () => {
   const [destinationPath, setDestinationPath] = useState('');
   const [pollingInterval, setPollingInterval] = useState(5);
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const [forceRemove, setForceRemove] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [syncStats, setSyncStats] = useState<SyncStats | null>(null);
   
@@ -24,6 +26,7 @@ const Index = () => {
     setDestinationPath(settings.destinationPath);
     setPollingInterval(settings.pollingInterval);
     setIsMonitoring(settings.isMonitoring);
+    setForceRemove(settings.forceRemove);
     setSyncStatus(syncService.getStatus());
     setSyncStats(syncService.getLatestStats());
     
@@ -88,6 +91,21 @@ const Index = () => {
       });
     }
   };
+
+  const handleForceRemoveChange = (force: boolean) => {
+    setForceRemove(force);
+    syncService.setForceRemove(force);
+    
+    if (force) {
+      toast.info('Force remove enabled', {
+        description: 'Non-empty directories will be removed recursively',
+      });
+    } else {
+      toast.info('Force remove disabled', {
+        description: 'Non-empty directories will be preserved',
+      });
+    }
+  };
   
   const handleSyncNow = () => {
     syncService.syncNow();
@@ -116,8 +134,10 @@ const Index = () => {
               pollingInterval={pollingInterval}
               isMonitoring={isMonitoring}
               syncStatus={syncStatus}
+              forceRemove={forceRemove}
               onPollingIntervalChange={handlePollingIntervalChange}
               onMonitoringChange={handleMonitoringChange}
+              onForceRemoveChange={handleForceRemoveChange}
               onSyncNow={handleSyncNow}
             />
             

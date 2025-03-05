@@ -6,7 +6,8 @@ export class SettingsManager {
     sourcePath: '',
     destinationPath: '',
     pollingInterval: 5, // default 5 seconds
-    isMonitoring: false
+    isMonitoring: false,
+    forceRemove: false
   };
   
   constructor() {
@@ -31,6 +32,11 @@ export class SettingsManager {
   
   setMonitoring(isMonitoring: boolean): void {
     this.settings.isMonitoring = isMonitoring;
+    this.saveToStorage();
+  }
+  
+  setForceRemove(forceRemove: boolean): void {
+    this.settings.forceRemove = forceRemove;
     this.saveToStorage();
   }
   

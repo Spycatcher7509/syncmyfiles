@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Play, Pause, RefreshCw } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import syncService from '@/lib/sync';
 import { SyncStatus } from '@/lib/types';
 
@@ -10,8 +11,10 @@ interface SyncControlsProps {
   pollingInterval: number;
   isMonitoring: boolean;
   syncStatus: SyncStatus;
+  forceRemove: boolean;
   onPollingIntervalChange: (value: number) => void;
   onMonitoringChange: (isMonitoring: boolean) => void;
+  onForceRemoveChange: (forceRemove: boolean) => void;
   onSyncNow: () => void;
 }
 
@@ -19,8 +22,10 @@ const SyncControls: React.FC<SyncControlsProps> = ({
   pollingInterval,
   isMonitoring,
   syncStatus,
+  forceRemove,
   onPollingIntervalChange,
   onMonitoringChange,
+  onForceRemoveChange,
   onSyncNow
 }) => {
   const canSync = syncService.canSync();
@@ -30,6 +35,10 @@ const SyncControls: React.FC<SyncControlsProps> = ({
   
   const handleMonitoringToggle = () => {
     onMonitoringChange(!isMonitoring);
+  };
+
+  const handleForceRemoveToggle = (checked: boolean) => {
+    onForceRemoveChange(checked);
   };
   
   const renderButtonContent = () => {
@@ -79,6 +88,15 @@ const SyncControls: React.FC<SyncControlsProps> = ({
           onValueChange={handleSliderChange}
           disabled={!canSync}
           className="py-1"
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-muted-foreground">Force Remove (Non-empty folders)</span>
+        <Switch
+          checked={forceRemove}
+          onCheckedChange={handleForceRemoveToggle}
+          disabled={!canSync}
         />
       </div>
       

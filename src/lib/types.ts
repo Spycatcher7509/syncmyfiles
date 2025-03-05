@@ -1,3 +1,4 @@
+
 export interface FolderPath {
   path: string;
   name: string;
@@ -10,6 +11,7 @@ export interface SyncSettings {
   destinationPath: string;
   pollingInterval: number; // in seconds
   isMonitoring: boolean;
+  forceRemove: boolean;
 }
 
 export type SyncStatus = 'idle' | 'syncing' | 'monitoring' | 'error';
@@ -39,6 +41,7 @@ declare global {
     readonly kind: 'directory';
     getDirectoryHandle(name: string, options?: { create?: boolean }): Promise<FileSystemDirectoryHandle>;
     getFileHandle(name: string, options?: { create?: boolean }): Promise<FileSystemFileHandle>;
+    removeEntry(name: string, options?: { recursive?: boolean }): Promise<void>;
     entries(): AsyncIterable<[string, FileSystemHandle]>;
   }
 
